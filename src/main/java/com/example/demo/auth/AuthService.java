@@ -4,6 +4,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.demo.config.jwt.JwtService;
+import com.example.demo.exception.BadRequestException;
+import com.example.demo.exception.UnauthorizedException;
+import com.example.demo.exception.UserAlreadyExistsException;
 import com.example.demo.user.Role;
 import com.example.demo.user.User;
 import com.example.demo.user.UserRepository;
@@ -20,21 +23,21 @@ public class AuthService {
 
     public AuthResponseDto register(AuthRegisterRequestDto request) {
         if (request.getUsername() == null || request.getUsername().isBlank()) {
-            throw new RuntimeException("El nombre de usuario es obligatorio");
+            throw new BadRequestException("El nombre de usuario es obligatorio");
         }
         if (request.getEmail() == null || request.getEmail().isBlank()) {
-            throw new RuntimeException("El correo electrónico es obligatorio");
+            throw new BadRequestException("El correo electrónico es obligatorio");
         }
         if (request.getPassword() == null || request.getPassword().isBlank()) {
-            throw new RuntimeException("La contraseña es obligatoria");
+            throw new BadRequestException("La contraseña es obligatoria");
         }
 
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("El nombre de usuario ya está registrado");
+            throw new UserAlreadyExistsException("El nombre de usuario ya está registrado");
         }
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("El correo electrónico ya está registrado");
+            throw new UserAlreadyExistsException("El correo electrónico ya está registrado");
         }
 
         User user = new User();
@@ -51,22 +54,21 @@ public class AuthService {
 
     public AuthResponseDto login(AuthLoginRequestDto request) {
         if (request.getUsername() == null || request.getUsername().isBlank()) {
-            throw new RuntimeException("El nombre de usuario es obligatorio");
+            throw new BadRequestException("El nombre de usuario es obligatorio");
         }
         if (request.getPassword() == null || request.getPassword().isBlank()) {
-            throw new RuntimeException("La contraseña es obligatoria");
+            throw new BadRequestException("La contraseña es obligatoria");
         }
 
         User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("Credenciales inválidas"));
+                .orElseThrow(() -> new UnauthorizedException("Credenciales inválidas"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Credenciales inválidas");
+            throw new UnauthorizedException("Credenciales inválidas");
         }
 
         String token = jwtService.generateToken(user);
         return new AuthResponseDto(token, user.getRole().name());
     }
-
 }
 
